@@ -1,54 +1,58 @@
 # AI prompt and use record
 
-**Assistant:** Claude (Anthropic), used as an engineering assistant for analysis, design, code and test generation.
-**Sensitive data:** no credentials or personal data were placed in prompts or recorded here.
+**Assistant:** Claude (Anthropic) as engineering assistant: analysis, design, code, tests, verification tooling.
+**Sensitive data:** no credentials or personal data in prompts or here.
 
-> **Candidate: review before submitting.** This record was drafted by the assistant from what actually happened in the session. The decisions below were made by the assistant while generating the work; amend any you disagree with and append your own prompts, so the record reflects your independent review.
+> **Candidate: review before submitting.** Drafted by the assistant from what actually happened. The accept/edit/reject calls were made by the assistant while working; change any you disagree with and append your own prompts so the record shows your independent review. Entries below are real; none are illustrative.
 
-## 1. Prompts, responses and decisions
+## 1. Prompts, responses, decisions
 
-### Prompt 1: the task
-*Prompt (summary):* Given the assessment PDF, build a complete Java/Spring Boot Maven project from scratch with tests, README, requirement mapping and a ZIP; treat "AICDL and agentic framework" as a high-priority scoring item; use real framework usage, not placeholders; verify before claiming success.
+### P1: build the assessment end to end
+*Prompt (summary, from the candidate):* Read the assessment PDF; build a complete Java 17 / Spring Boot / Maven project from scratch with validation, centralised errors, tests (incl. every acceptance criterion), README with requirement mapping, ZIP; treat "AICDL and agentic framework" as high priority but without placeholder or simulated integrations; run the build and do not claim results not observed.
 
-*Response (summary):* Extracted the PDF text. Observed that (a) neither AICDL nor an agentic framework is defined, (b) the only AI requirement is AC7, (c) no starter project exists so an in-memory store is allowed, (d) a rubric file is referenced but not supplied.
+*Response (summary):* Extracted the PDF text; found AICDL/agentic framework undefined and AC7 the only AI requirement; no starter so in-memory is allowed; built service, tests, docs.
 
 | Suggestion | Decision | Reason |
 |---|---|---|
-| Embed an LLM/agent in the running service | **Rejected** | Not required; scope boundaries forbid extras; acceptance criteria are deterministic; it would need credentials and could not be verified offline. A stub would misrepresent the work. |
-| Database / JPA | **Rejected** | Brief permits in-memory and says no new database. |
-| OpenAPI/Swagger | **Rejected** | Optional; README documents the API; avoids an extra dependency. |
-| Spring Boot 3.3.5, Java 17, in-memory repository | **Accepted** | Matches the brief. |
-*Informed:* `pom.xml`, overall architecture, this record.
+| Embed an LLM/agent in the running service | **Rejected** | Brief's scope bans extras; criteria are deterministic; would need credentials and be unverifiable offline. A stub would be the "simulated integration" the prompt itself forbids. |
+| Database/JPA, OpenAPI | **Rejected** | Brief permits in-memory, says no new database; OpenAPI is optional extra dependency. |
+| One fair `ReentrantLock`, in-memory `LinkedHashSet`s | **Accepted** | Simplest atomic check-then-act. Per-learner locks/concurrent collections rejected (capacity check spans structures). |
+| Skip-and-retain for ineligible waiters, and re-run promotion when completed courses change | **Accepted** | Only reversible policy; keeps FIFO fairness; preserves "no open seat beside an eligible waiter". Remove-on-skip rejected. |
+*Informed:* `RegistrationService`, `RegistrationRepository`, `docs/DESIGN.md`.
 
-### Prompt 2 (assistant's own design question): ineligible learner at the front
-*Response (summary):* Compared remove-on-skip with skip-and-retain; chose skip-and-retain, and noted a seat could stay open beside a newly eligible waiter unless a records update re-runs promotion.
+*Verification:* `mvn` could not run (Central blocked, HTTP 403). Instead: core classes compiled against stub annotations and a 19-check harness run: **19 passed, 0 failed**.
 
-| Suggestion | Decision |
-|---|---|
-| Skip-and-retain | **Accepted** |
-| Re-run promotion when completed courses change | **Accepted** (invariant 4) |
-| Remove ineligible learner from queue | **Rejected** |
-*Informed:* `RegistrationService.fillOpenSeats`, `updateCompletedCourses`, DESIGN.md.
+### P2: review against an external evaluation (52/100, AI effectiveness 3/10)
+*Prompt (summary, from the candidate):* Review the evaluation of my earlier GitHub submission and target 95+/100 overall and above 9/10 for AI/agentic effectiveness.
 
-### Prompt 3: concurrency approach
-| Suggestion | Decision | Reason |
+*Response (summary):* Mapped each finding to this project: most were already absent (no fake agent layer, no Swagger, real policy, API tests, drop-from-waitlist). Remaining gaps: no proof the concurrency test needs the lock, thin record, no iteration history, doc wording, no worked ineligible-learner answer.
+
+| Finding | Action | Decision |
 |---|---|---|
-| One fair `ReentrantLock` around every operation | **Accepted** | Simplest way to make check-then-act atomic. |
-| Per-learner locks / concurrent collections | **Rejected** | Capacity check spans several structures. |
-*Informed:* `RegistrationService`, `RegistrationServiceConcurrencyTest`.
+| Prompt log not real | Replaced with this real record | Accepted |
+| Agent layer for show | None exists; `AGENTS.md` gives a real agent the invariants and a definition of done | Accepted |
+| Policy muddled | One policy, in DESIGN, code comment, tests and a worked example | Accepted |
+| Docs hedge / wrong env-var claim | Hedging removed; relaxed-binding note added (`OFFERING_CAPACITY`) | Accepted |
+| Tests only assert "throws" | Added `businessFailuresCarryTheDocumentedCodesAndStatuses` (code + HTTP status); MockMvc tests assert statuses | Accepted |
+| No evidence concurrency test fails without lock | `verification/` mutation harness (below) | Accepted |
+| Single commit, no iteration | Real incremental commits (`git log`); history not backdated and the first commit is the whole baseline, so it shows iteration only from that point | Edited: stated honestly |
+| Waitlist timestamps unused, awkward controller flag, unused import | Not present in this code (no timestamps; controller calls `enroll(id)` only) | No change needed |
+| Use of a "skill.md"/prompt string nothing consumes | Not added | Rejected |
 
-### Review pass on generated code
-| Finding | Decision |
+## 2. Verification evidence (real runs, `verification/run.sh`, JDK 21 sandbox)
+Each mutant is a deliberate bug applied to a copy of `RegistrationService`; the checks must fail.
+
+| Run | Outcome |
 |---|---|
-| Catch-all `@ExceptionHandler(Exception.class)` would turn framework 404/405/415 errors into 500s | **Edited**: framework errors now keep their status (`GlobalExceptionHandler.unexpected`). |
+| Unmodified | **19 passed, 0 failed** |
+| `nolock` (lock removed) | `ConcurrentModificationException` from the racing-enrol check, then process hung until timeout (exit 124): **caught** |
+| `lifo` (promote latest) | 4 failed (FIFO promotion, waiter leaves, retained priority, racing drops): **caught** |
+| `noeligibility` (promote without checking) | 3 failed (AC4 skip, retain, open-seat restore): **caught** |
+| `nocapacity` (ignore capacity) | many failed (AC2, AC3, AC5...): **caught** |
+| `dropnocheck` (repeated drop succeeds) | 3 failed (repeated drop, unknown drop, racing drops): **caught** |
+| `removeineligible` (wrong policy) | 2 failed (retained, open-seat restore): **caught** |
 
-## 2. Verification evidence
-| What | Result |
-|---|---|
-| `mvn test` / `mvn package` | **Not run.** Maven Central returned HTTP 403 (policy) in the authoring environment. |
-| Core classes (config, domain, repository, service) compiled with `javac` against stub Spring/SLF4J/Jakarta annotations | Compiled cleanly. |
-| 19-check plain-Java harness mirroring the unit and concurrency tests (AC1-AC5, skip-and-retain, 60 racing enrolments, same-learner race, racing duplicate drops) | **19 passed, 0 failed.** |
-| Controller, exception handler, JUnit and MockMvc tests | **Not compiled or executed.** Reviewed by reading only. |
+**Not verified:** `mvn clean verify`; the controller, exception handler, JUnit and MockMvc tests have never been compiled or run. The new `businessFailuresCarry...` test is likewise unrun.
 
-## 3. Process incident (candid note)
-While building, the assistant wrote into a working folder that already held an earlier attempt at the same assessment, overwriting about nine same-named files (pom.xml, application.yml, main class, config and four domain records) before noticing. Nothing was deleted; the assistant moved only its own files into a clean folder and left the remaining earlier files untouched.
+## 3. Process incident
+While building, the assistant wrote into a folder that already held an earlier attempt at this assessment and overwrote about nine same-named files before noticing. Nothing was deleted; its own files were moved to a clean folder and the earlier files left untouched.
