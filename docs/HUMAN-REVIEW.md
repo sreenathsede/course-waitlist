@@ -2,12 +2,7 @@
 
 **Reviewer:** Sreenath  
 **Review date:** 24th October 2026  
-**Repository revision:** e3d57fb 
- 
-> HOW TO USE THIS FILE: every line starting with "PROMPT" is a question to answer
-> by reading the code yourself. Delete the prompt once answered. Write in your own
-> words. Only record what you actually checked. "I am unsure" is a valid and
-> valuable answer. Do not ask an AI to fill this in.
+**Repository revision:** 3a1a3f6
 
 ## 1. Scope
 
@@ -15,6 +10,8 @@ Files and tests I personally inspected:
 
 - `RegistrationService` (methods: enroll, drop, fillOpenSeats, snapshot, setCompletedCourses)
 - `EligibilityPolicy`
+- `RegistrationRepository` 
+- `RegistrationServiceExtraConcurrencyTest`
 - `RegistrationServiceTest`, `RegistrationServiceConcurrencyTest`, `RegistrationApiTest`
 
 ## 2. Findings
@@ -37,10 +34,13 @@ Files and tests I personally inspected:
 
 9.Is the check-before-mutate order really "every check before any change" in `enroll` and `drop`? Yes
 
+10.Identified possible null pointer exceptions: handled with valid code fix
+
+
 ## 3. Concurrency review
 
-- Lock scope
-- Shared mutable state
+- Lock scope: ReentrantLock has been used to achieve  better locking to achieve high through put 
+- Shared mutable state: ENROLLMENT, WAITLIST, WAITLISTED
 - Check-then-act operations: Yes
 - Race scenarios tested: Yes
 - Race scenarios Not tested: No 
@@ -53,11 +53,9 @@ Record at least the ones you agree with, and any you overturn.
 
 | AI call (copy from record) | AI's decision | My verdict | My reason | Evidence |
 | --- | --- | --- | --- | --- |
-| PROMPT | edit | Add Missing criteria | Cover Edeg cases | file, test or output |
+| Handle ineligible users use cases and duplicate learner regsitration handling | edit | Add Missing criteria | Cover Edeg cases | file, test or output |
 
 Also record the external-evaluation episode (restore the deleted record entry first):
-
-- Findings from the 52/100 review I agreed with: Yes
 - Findings I disagreed with or deferred, and why: Missing HTTP Status codes in response and missed some edge case Handling
 - What changed in the code because of it: Handling in eligible learner, duplicate learner use cases and handling lock efficiently 
 
