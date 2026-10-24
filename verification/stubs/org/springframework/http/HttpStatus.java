@@ -1,0 +1,1 @@
+package org.springframework.http; public enum HttpStatus { BAD_REQUEST(400), CONFLICT(409), UNPROCESSABLE_ENTITY(422), NOT_FOUND(404); private final int v; HttpStatus(int v){this.v=v;} public int value(){return v;} }
