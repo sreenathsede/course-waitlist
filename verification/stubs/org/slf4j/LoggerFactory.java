@@ -1,1 +1,1 @@
-package org.slf4j; public class LoggerFactory { public static Logger getLogger(Class<?> c){ return (f,a)->{}; } }
+package org.slf4j; public class LoggerFactory { public static Logger getLogger(Class<?> c){ return new Logger(){ public void info(String f, Object... a){} public void warn(String f, Object... a){} }; } }

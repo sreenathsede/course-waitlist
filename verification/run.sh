@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Offline check that needs only a JDK (no Maven/Spring download). Compiles config/domain/repository/service
 # against tiny stub annotations and runs Harness. Optional arg = mutant name: the run MUST then FAIL.
-# Mutants: nolock lifo noeligibility nocapacity dropnocheck removeineligible
+# Mutants: nolock notimeout lifo noeligibility nocapacity dropnocheck removeineligible
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; ROOT="$HERE/.."
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT

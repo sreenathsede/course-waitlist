@@ -21,15 +21,17 @@ import org.springframework.test.web.servlet.ResultActions;
  * End-to-end through controller, validation, service, repository and error handler. A fresh context per test
  * resets the in-memory state. Test properties: capacity 2, prerequisite CS101.
  */
-@SpringBootTest(properties = {"offering.capacity=2", "offering.prerequisite=CS101"})
+@SpringBootTest(properties = {"offering.capacity=2", "offering.prerequisite=CS101", "admin.api-key=test-key"})
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 class RegistrationApiTest {
 
-    @Autowired MockMvc mvc;
+    @Autowired
+    MockMvc mvc;
 
     private ResultActions qualify(String id) throws Exception {
         return mvc.perform(put("/api/learners/" + id + "/completed-courses")
+                .header("X-Admin-Key", "test-key")
                 .contentType(MediaType.APPLICATION_JSON).content("{\"completedCourses\":[\"CS101\"]}"));
     }
 
@@ -47,7 +49,10 @@ class RegistrationApiTest {
 
     @Test
     void fullOfferingReturns202WithWaitlistPosition() throws Exception {
-        for (String id : new String[]{"a", "b", "c"}) { qualify(id); enroll(id); }
+        for (String id : new String[]{"a", "b", "c"}) {
+            qualify(id);
+            enroll(id);
+        }
         mvc.perform(get("/api/offering")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.enrolled.length()").value(2))
                 .andExpect(jsonPath("$.waitlist[0]").value("c"));
@@ -59,7 +64,8 @@ class RegistrationApiTest {
 
     @Test
     void duplicateEnrollmentReturns409() throws Exception {
-        qualify("a"); enroll("a");
+        qualify("a");
+        enroll("a");
         enroll("a").andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ALREADY_ENROLLED"))
                 .andExpect(jsonPath("$.path").value("/api/offering/enrollments"));
@@ -76,7 +82,10 @@ class RegistrationApiTest {
 
     @Test
     void dropPromotesFifoAndRepeatedDropReturns404() throws Exception {
-        for (String id : new String[]{"a", "b", "c"}) { qualify(id); enroll(id); }
+        for (String id : new String[]{"a", "b", "c"}) {
+            qualify(id);
+            enroll(id);
+        }
         mvc.perform(delete("/api/offering/enrollments/a")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.droppedFrom").value("ENROLLMENT"))
                 .andExpect(jsonPath("$.promotedLearners[0]").value("c"));
@@ -108,7 +117,29 @@ class RegistrationApiTest {
 
     @Test
     void nullCompletedCoursesReturns400() throws Exception {
-        mvc.perform(put("/api/learners/a/completed-courses").contentType(MediaType.APPLICATION_JSON).content("{}"))
+        mvc.perform(put("/api/learners/a/completed-courses").header("X-Admin-Key", "test-key").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ---- records endpoint is gated ----
+    @Test
+    void recordsEndpointWithoutKeyReturns401() throws Exception {
+        mvc.perform(put("/api/learners/a/completed-courses").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"completedCourses\":[\"CS101\"]}"))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("ADMIN_UNAUTHORIZED"));
+        enroll("a").andExpect(status().isUnprocessableEntity()); // nothing was recorded
+    }
+
+    @Test
+    void recordsEndpointWithWrongKeyReturns401() throws Exception {
+        mvc.perform(put("/api/learners/a/completed-courses").header("X-Admin-Key", "nope")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"completedCourses\":[\"CS101\"]}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void publicEndpointsNeedNoKey() throws Exception {
+        mvc.perform(get("/api/offering")).andExpect(status().isOk());
+        mvc.perform(delete("/api/offering/enrollments/ghost")).andExpect(status().isNotFound());
     }
 }

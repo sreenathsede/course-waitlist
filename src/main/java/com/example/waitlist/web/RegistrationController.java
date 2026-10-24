@@ -23,9 +23,11 @@ import jakarta.validation.Valid;
 public class RegistrationController {
 
     private final RegistrationService service;
+    private final AdminGate adminGate;
 
-    public RegistrationController(RegistrationService service) {
+    public RegistrationController(RegistrationService service, AdminGate adminGate) {
         this.service = service;
+        this.adminGate = adminGate;
     }
 
     /**
@@ -53,10 +55,14 @@ public class RegistrationController {
 
     /**
      * Stand-in for a records system: set what a learner has completed (drives the prerequisite rule).
+     * Gated by the X-Admin-Key header (401 wrong/missing, 403 when no key is configured). Note: Bean Validation of
+     * the body runs before this method, so a malformed body is reported as 400 even without a key.
      */
     @PutMapping("/learners/{learnerId}/completed-courses")
     public CompletedCoursesResponse setCompleted(@PathVariable String learnerId,
+                                                 @RequestHeader(value = "X-Admin-Key", required = false) String adminKey,
                                                  @Valid @RequestBody CompletedCoursesRequest request) {
+        adminGate.check(adminKey);
         List<String> promoted = service.updateCompletedCourses(learnerId, new java.util.HashSet<>(request.completedCourses()));
         return new CompletedCoursesResponse(learnerId.trim(), request.completedCourses(), promoted);
     }

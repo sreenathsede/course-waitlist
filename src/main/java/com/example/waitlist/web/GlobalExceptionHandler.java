@@ -26,11 +26,14 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
-     * Business failures: status and code come from the exception itself.
+     * Business failures: the code comes from the exception, the HTTP status from {@link HttpStatusMapper}.
      */
     @ExceptionHandler(RegistrationException.class)
     public ResponseEntity<ErrorResponse> business(RegistrationException ex, HttpServletRequest req) {
-        return build(ex.status(), ex.code(), ex.getMessage(), req);
+        HttpStatus status = HttpStatusMapper.statusFor(ex.errorCode());
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(status);
+        if (status == HttpStatus.SERVICE_UNAVAILABLE) response.header("Retry-After", "1");
+        return response.body(new ErrorResponse(Instant.now(), status.value(), ex.code(), ex.getMessage(), req.getRequestURI()));
     }
 
     /**

@@ -28,10 +28,10 @@ Capacity 2, prerequisite CS101. `a`, `b` enrolled; `c`, `d` waitlisted (position
 Tests: `ineligibleWaiterIsSkippedButRetainsPlace`, `restoredEligibilityPromotesRetainedLearnerIntoOpenSeat`, `retainedLearnerKeepsPriorityOverLaterJoiners`.
 
 ## Concurrency
-All operations take one fair `ReentrantLock`. The aggregate is tiny, so a coarse lock is simplest and makes check-then-act (count, then add) atomic; the repository is deliberately not thread-safe. Alternatives rejected: per-learner locks or concurrent collections (capacity check spans several structures), optimistic versioning (needs a persistence layer we do not have).
+All operations take one fair `ReentrantLock`. The aggregate is tiny, so a coarse lock is simplest and makes check-then-act (count, then add) atomic; the repository is deliberately not thread-safe. **Timeouts:** lock acquisition is bounded (`offering.lock-timeout-millis`). A request that cannot get the lock fails with `SERVICE_BUSY` (503, `Retry-After`) before touching any state, so a stuck holder cannot pile up unbounded request threads and a timed-out request is safe to retry. Seat-offer expiry (holding a promoted seat for a learner to accept) is out of scope: promotion enrols immediately. Alternatives rejected: per-learner locks or concurrent collections (capacity check spans several structures), optimistic versioning (needs a persistence layer we do not have).
 
 ## API
-See README. Status mapping: 201 enrolled · 202 waitlisted · 400 invalid · 404 nothing to drop · 409 duplicate · 422 prerequisite not met.
+See README. Status mapping lives only in `web/HttpStatusMapper` (the service layer throws `ErrorCode`s and knows no HTTP): 201 enrolled · 202 waitlisted · 400 invalid · 401 bad admin key · 403 records endpoint disabled · 404 nothing to drop · 409 duplicate · 422 prerequisite not met · 503 busy.
 
 ## Trade-offs
 In-memory state is lost on restart and single-instance only. Dropping a waitlisted learner is allowed so people can leave the queue. Duplicate enrol requests return 409 rather than an idempotent 200 so callers get an unambiguous signal.

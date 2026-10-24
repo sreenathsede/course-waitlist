@@ -19,7 +19,7 @@ Do not add a second lock or concurrent collections without re-reading the design
 
 ## Before reporting done
 1. `mvn clean verify` must pass; quote the actual result.
-2. `verification/run.sh` must print `19 passed, 0 failed`, and each mutant (`nolock lifo noeligibility nocapacity
+2. `verification/run.sh` must print `38 passed, 0 failed`, and each mutant (`nolock lifo noeligibility nocapacity
    dropnocheck removeineligible`) must make it FAIL. A change that lets a mutant pass has weakened the tests.
 3. If you cannot run a check, say so. Never claim a result you did not observe.
 

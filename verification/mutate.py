@@ -7,7 +7,11 @@ def rep(old, new):
     assert old in s, f"mutation target not found: {old!r}"
     s = s.replace(old, new, 1)
 if m == "nolock":      # remove mutual exclusion
-    rep("lock.lock();", ""); rep("lock.unlock();", "")
+    rep("acquired = lock.tryLock(offering.lockTimeoutMillis(), TimeUnit.MILLISECONDS);",
+        "if (System.nanoTime() == Long.MIN_VALUE) throw new InterruptedException(); acquired = true;")
+    rep("lock.unlock();", "")
+elif m == "notimeout":   # wait for the lock forever instead of failing with SERVICE_BUSY
+    rep("acquired = lock.tryLock(offering.lockTimeoutMillis(), TimeUnit.MILLISECONDS);", "lock.lockInterruptibly(); acquired = true;")
 elif m == "lifo":      # promote latest instead of earliest
     rep("for (String candidate : repo.waitlistInOrder()) {",
         "List<String> rev = repo.waitlistInOrder(); java.util.Collections.reverse(rev);\n        for (String candidate : rev) {")

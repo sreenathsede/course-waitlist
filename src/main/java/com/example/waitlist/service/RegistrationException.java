@@ -1,75 +1,97 @@
 package com.example.waitlist.service;
 
-import org.springframework.http.HttpStatus;
-
 /**
- * Base class for expected, business-level failures. Each carries a stable machine-readable
- * {@code code} and the HTTP status it maps to, so the web layer needs just one handler.
- * Thrown BEFORE any state is changed, which is how invalid requests never corrupt state.
+ * Base class for expected, business-level failures. Carries only an {@link ErrorCode}; mapping to a transport
+ * status (HTTP) is the web layer's job. Thrown BEFORE any state is changed, so rejected requests never corrupt state.
  */
 public abstract class RegistrationException extends RuntimeException {
-    private final String code;
-    private final HttpStatus status;
+    private final ErrorCode errorCode;
 
-    protected RegistrationException(String code, HttpStatus status, String message) {
+    protected RegistrationException(ErrorCode errorCode, String message) {
         super(message);
-        this.code = code;
-        this.status = status;
+        this.errorCode = errorCode;
     }
 
-    public String code() {
-        return code;
-    }
-
-    public HttpStatus status() {
-        return status;
+    public ErrorCode errorCode() {
+        return errorCode;
     }
 
     /**
-     * Malformed input such as a blank or illegal learner id (400).
+     * Machine-readable code used in API error bodies.
+     */
+    public String code() {
+        return errorCode.name();
+    }
+
+    /**
+     * Malformed input such as a blank or illegal learner id.
      */
     public static class InvalidRequest extends RegistrationException {
         public InvalidRequest(String message) {
-            super("INVALID_REQUEST", HttpStatus.BAD_REQUEST, message);
+            super(ErrorCode.INVALID_REQUEST, message);
         }
     }
 
     /**
-     * Learner already holds a seat (409).
+     * Learner already holds a seat.
      */
     public static class AlreadyEnrolled extends RegistrationException {
         public AlreadyEnrolled(String id) {
-            super("ALREADY_ENROLLED", HttpStatus.CONFLICT, "Learner '" + id + "' is already enrolled");
+            super(ErrorCode.ALREADY_ENROLLED, "Learner '" + id + "' is already enrolled");
         }
     }
 
     /**
-     * Learner is already queued; no second waitlist record is created (409).
+     * Learner is already queued; no second waitlist record is created.
      */
     public static class AlreadyWaitlisted extends RegistrationException {
         public AlreadyWaitlisted(String id, int position) {
-            super("ALREADY_WAITLISTED", HttpStatus.CONFLICT,
-                    "Learner '" + id + "' is already on the waitlist at position " + position);
+            super(ErrorCode.ALREADY_WAITLISTED, "Learner '" + id + "' is already on the waitlist at position " + position);
         }
     }
 
     /**
-     * Prerequisite not satisfied; the learner is neither enrolled nor queued (422).
+     * Prerequisite not satisfied; the learner is neither enrolled nor queued.
      */
     public static class PrerequisiteNotMet extends RegistrationException {
         public PrerequisiteNotMet(String id, String prerequisite) {
-            super("PREREQUISITE_NOT_MET", HttpStatus.UNPROCESSABLE_ENTITY,
-                    "Learner '" + id + "' has not completed prerequisite " + prerequisite);
+            super(ErrorCode.PREREQUISITE_NOT_MET, "Learner '" + id + "' has not completed prerequisite " + prerequisite);
         }
     }
 
     /**
-     * Drop for a learner that is neither enrolled nor waitlisted, including a repeated drop (404).
+     * Drop for a learner that is neither enrolled nor waitlisted, including a repeated drop.
      */
     public static class NotRegistered extends RegistrationException {
         public NotRegistered(String id) {
-            super("NOT_REGISTERED", HttpStatus.NOT_FOUND,
-                    "Learner '" + id + "' is not enrolled or waitlisted (nothing to drop)");
+            super(ErrorCode.NOT_REGISTERED, "Learner '" + id + "' is not enrolled or waitlisted (nothing to drop)");
+        }
+    }
+
+    /**
+     * The request waited longer than the lock timeout (or was interrupted). Safe to retry: nothing changed.
+     */
+    public static class ServiceBusy extends RegistrationException {
+        public ServiceBusy() {
+            super(ErrorCode.SERVICE_BUSY, "The service is busy; no change was made, please retry");
+        }
+    }
+
+    /**
+     * The admin (records) endpoint is switched off because no admin key is configured.
+     */
+    public static class AdminDisabled extends RegistrationException {
+        public AdminDisabled() {
+            super(ErrorCode.ADMIN_DISABLED, "Records endpoint is disabled: no admin key is configured");
+        }
+    }
+
+    /**
+     * Missing or incorrect admin key.
+     */
+    public static class AdminUnauthorized extends RegistrationException {
+        public AdminUnauthorized() {
+            super(ErrorCode.ADMIN_UNAUTHORIZED, "Missing or invalid X-Admin-Key");
         }
     }
 }

@@ -18,18 +18,22 @@ import com.example.waitlist.domain.EnrollmentOutcome;
 import com.example.waitlist.repository.RegistrationRepository;
 import com.example.waitlist.service.RegistrationException.*;
 
-/** Pure unit tests (no Spring context): capacity 2, prerequisite CS101. One test per acceptance-criteria behaviour. */
+/**
+ * Pure unit tests (no Spring context): capacity 2, prerequisite CS101. One test per acceptance-criteria behaviour.
+ */
 class RegistrationServiceTest {
 
     private RegistrationService service;
 
     @BeforeEach
     void setUp() {
-        OfferingProperties props = new OfferingProperties("CS201", 2, "CS101");
+        OfferingProperties props = new OfferingProperties("CS201", 2, "CS101", 2000L);
         service = new RegistrationService(props, new EligibilityPolicy(props), new RegistrationRepository());
     }
 
-    /** Make a learner eligible for the prerequisite. */
+    /**
+     * Make a learner eligible for the prerequisite.
+     */
     private void qualify(String... ids) {
         for (String id : ids) service.updateCompletedCourses(id, Set.of("CS101"));
     }
@@ -61,7 +65,8 @@ class RegistrationServiceTest {
     @Test
     void ineligibleLearnerIsRejectedEvenWhenFull() {
         qualify("a", "b");
-        service.enroll("a"); service.enroll("b");
+        service.enroll("a");
+        service.enroll("b");
         assertThatThrownBy(() -> service.enroll("nope")).isInstanceOf(PrerequisiteNotMet.class);
         assertThat(service.snapshot().waitlist()).isEmpty();
     }
@@ -70,7 +75,8 @@ class RegistrationServiceTest {
     @Test
     void eligibleLearnerJoinsWaitlistWhenFullWithPosition() {
         qualify("a", "b", "c", "d");
-        service.enroll("a"); service.enroll("b");
+        service.enroll("a");
+        service.enroll("b");
         var c = service.enroll("c");
         var d = service.enroll("d");
         assertThat(c.outcome()).isEqualTo(EnrollmentOutcome.WAITLISTED);
@@ -90,7 +96,9 @@ class RegistrationServiceTest {
     @Test
     void duplicateWaitlistRequestDoesNotCreateSecondRecord() {
         qualify("a", "b", "c");
-        service.enroll("a"); service.enroll("b"); service.enroll("c");
+        service.enroll("a");
+        service.enroll("b");
+        service.enroll("c");
         assertThatThrownBy(() -> service.enroll("c")).isInstanceOf(AlreadyWaitlisted.class);
         assertThat(service.snapshot().waitlist()).containsExactly("c");
     }
@@ -99,7 +107,10 @@ class RegistrationServiceTest {
     @Test
     void dropPromotesEarliestWaitlistedLearner() {
         qualify("a", "b", "c", "d");
-        service.enroll("a"); service.enroll("b"); service.enroll("c"); service.enroll("d");
+        service.enroll("a");
+        service.enroll("b");
+        service.enroll("c");
+        service.enroll("d");
         var result = service.drop("a");
         assertThat(result.droppedFrom()).isEqualTo(DroppedFrom.ENROLLMENT);
         assertThat(result.promotedLearners()).containsExactly("c");
@@ -122,7 +133,10 @@ class RegistrationServiceTest {
     @Test
     void ineligibleWaiterIsSkippedButRetainsPlace() {
         qualify("a", "b", "c", "d");
-        service.enroll("a"); service.enroll("b"); service.enroll("c"); service.enroll("d");
+        service.enroll("a");
+        service.enroll("b");
+        service.enroll("c");
+        service.enroll("d");
         service.updateCompletedCourses("c", Set.of());            // c loses the prerequisite while waiting
         var result = service.drop("a");
         assertThat(result.promotedLearners()).containsExactly("d"); // c skipped, d promoted
@@ -133,7 +147,9 @@ class RegistrationServiceTest {
     @Test
     void restoredEligibilityPromotesRetainedLearnerIntoOpenSeat() {
         qualify("a", "b", "c");
-        service.enroll("a"); service.enroll("b"); service.enroll("c");
+        service.enroll("a");
+        service.enroll("b");
+        service.enroll("c");
         service.updateCompletedCourses("c", Set.of());
         service.drop("a");                                         // seat opens, only waiter is ineligible
         assertThat(service.snapshot().seatsAvailable()).isEqualTo(1);
@@ -146,7 +162,9 @@ class RegistrationServiceTest {
     @Test
     void retainedLearnerKeepsPriorityOverLaterJoiners() {
         qualify("a", "b", "c", "d");
-        service.enroll("a"); service.enroll("b"); service.enroll("c");
+        service.enroll("a");
+        service.enroll("b");
+        service.enroll("c");
         service.updateCompletedCourses("c", Set.of());
         service.enroll("d");                                       // joins behind c
         service.updateCompletedCourses("c", Set.of("CS101"));
@@ -158,7 +176,9 @@ class RegistrationServiceTest {
     @Test
     void repeatedDropFailsAndDoesNotFreeExtraSeat() {
         qualify("a", "b", "c");
-        service.enroll("a"); service.enroll("b"); service.enroll("c");
+        service.enroll("a");
+        service.enroll("b");
+        service.enroll("c");
         service.drop("a");                                         // c promoted, full again
         assertThatThrownBy(() -> service.drop("a")).isInstanceOf(NotRegistered.class);
         var snap = service.snapshot();
@@ -175,7 +195,10 @@ class RegistrationServiceTest {
     @Test
     void waitlistedLearnerCanLeaveWithoutChangingSeats() {
         qualify("a", "b", "c", "d");
-        service.enroll("a"); service.enroll("b"); service.enroll("c"); service.enroll("d");
+        service.enroll("a");
+        service.enroll("b");
+        service.enroll("c");
+        service.enroll("d");
         var result = service.drop("c");
         assertThat(result.droppedFrom()).isEqualTo(DroppedFrom.WAITLIST);
         assertThat(service.snapshot().waitlist()).containsExactly("d");
@@ -205,7 +228,7 @@ class RegistrationServiceTest {
 
     @Test
     void offeringWithoutPrerequisiteAcceptsAnyone() {
-        OfferingProperties props = new OfferingProperties("OPEN1", 1, "");
+        OfferingProperties props = new OfferingProperties("OPEN1", 1, "", 2000L);
         var open = new RegistrationService(props, new EligibilityPolicy(props), new RegistrationRepository());
         assertThat(open.enroll("anyone").outcome()).isEqualTo(EnrollmentOutcome.ENROLLED);
         assertThat(open.enroll("second").outcome()).isEqualTo(EnrollmentOutcome.WAITLISTED);
@@ -219,22 +242,22 @@ class RegistrationServiceTest {
         assertThat(List.of("a")).isEqualTo(service.snapshot().enrolled());
     }
 
-    // ---- the web layer relies on these codes/statuses; pin them so a refactor cannot silently change the contract ----
+    // ---- the web layer maps these codes to HTTP statuses (see HttpStatusMapperTest); the service itself is HTTP-free ----
     @Test
-    void businessFailuresCarryTheDocumentedCodesAndStatuses() {
+    void businessFailuresCarryTheDocumentedErrorCodes() {
         qualify("a", "b", "c");
         service.enroll("a");
         assertThatThrownBy(() -> service.enroll("a")).isInstanceOfSatisfying(RegistrationException.class,
-                e -> { assertThat(e.code()).isEqualTo("ALREADY_ENROLLED"); assertThat(e.status().value()).isEqualTo(409); });
+                e -> assertThat(e.errorCode()).isEqualTo(ErrorCode.ALREADY_ENROLLED));
         assertThatThrownBy(() -> service.enroll("zzz")).isInstanceOfSatisfying(RegistrationException.class,
-                e -> { assertThat(e.code()).isEqualTo("PREREQUISITE_NOT_MET"); assertThat(e.status().value()).isEqualTo(422); });
+                e -> assertThat(e.errorCode()).isEqualTo(ErrorCode.PREREQUISITE_NOT_MET));
         assertThatThrownBy(() -> service.drop("zzz")).isInstanceOfSatisfying(RegistrationException.class,
-                e -> { assertThat(e.code()).isEqualTo("NOT_REGISTERED"); assertThat(e.status().value()).isEqualTo(404); });
+                e -> assertThat(e.errorCode()).isEqualTo(ErrorCode.NOT_REGISTERED));
         assertThatThrownBy(() -> service.enroll(" ")).isInstanceOfSatisfying(RegistrationException.class,
-                e -> { assertThat(e.code()).isEqualTo("INVALID_REQUEST"); assertThat(e.status().value()).isEqualTo(400); });
+                e -> assertThat(e.errorCode()).isEqualTo(ErrorCode.INVALID_REQUEST));
         service.enroll("b");
         service.enroll("c");
         assertThatThrownBy(() -> service.enroll("c")).isInstanceOfSatisfying(RegistrationException.class,
-                e -> { assertThat(e.code()).isEqualTo("ALREADY_WAITLISTED"); assertThat(e.status().value()).isEqualTo(409); });
+                e -> assertThat(e.errorCode()).isEqualTo(ErrorCode.ALREADY_WAITLISTED));
     }
 }

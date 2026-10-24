@@ -1,104 +1,28 @@
-# Independent Human Code Review
+# Human review
 
-**Reviewer:** Sreenath  
-**Review date:** 24th October 2026  
-**Repository revision:** 3a1a3f6
+**Reviewer:** Sreenath Sede. The five numbered comments below are the reviewer's own, quoted as given.
+The "What the code does now" notes were written with AI assistance from the repository state and **must be re-read and edited into the candidate's own words and verdict before submission**; nothing here is a substitute for that.
 
-## 1. Scope
+## Reviewer comments and resulting changes
 
-Files and tests I personally inspected:
+### 1. "Why can't we use a queue instead of a set / LinkedHashSet?"
+A queue *can* be used and is the more obvious data structure for FIFO. `LinkedHashSet` was chosen because the waitlist needs more than head/tail operations:
+* **Duplicates are impossible by construction** (invariant 2). A plain `Queue`/`Deque` needs a parallel `HashSet` kept in sync, or an O(n) `contains` on every enrol.
+* **Arbitrary removal.** A waitlisted learner can drop out of the middle of the queue. `Queue.remove(Object)` is O(n); `LinkedHashSet.remove` is O(1).
+* **Skip-and-retain needs a non-destructive scan.** Promotion walks the queue front to back, skipping ineligible learners *without removing them*. `poll()` only exposes the head, so a queue would need peek-and-reinsert or iterating anyway.
+* Insertion order is preserved by `LinkedHashSet`, so FIFO holds.
 
-- `RegistrationService` (methods: enroll, drop, fillOpenSeats, snapshot, setCompletedCourses)
-- `EligibilityPolicy`
-- `RegistrationRepository` 
-- `RegistrationServiceExtraConcurrencyTest`
-- `RegistrationServiceTest`, `RegistrationServiceConcurrencyTest`, `RegistrationApiTest`
+Trade-off accepted: position lookup is O(n) either way, which is fine at classroom scale. Decision: **keep `LinkedHashSet`**; reconsider a `Deque` plus a membership set only if profiling showed a problem.
 
-## 2. Findings
+### 2. "Timeout use cases are not handled"
+Interpreted as: a request must not wait forever on the single offering lock. **Now handled:** lock acquisition uses `tryLock(timeout)` (`offering.lock-timeout-millis`, default 2000). On timeout or interrupt the request fails with `ServiceBusy` → HTTP 503 `SERVICE_BUSY` with `Retry-After`, before any state is touched, so retry is safe. The interrupt flag is restored. Tests: `RegistrationServiceTimeoutTest` (a waiter times out while another thread holds the lock; state is untouched; interrupted waiter).
+**Not handled, by decision:** seat-offer expiry (holding a promoted seat for a learner to accept within a deadline). The brief forbids extra scope and promotion enrols immediately, so there is no pending offer to expire. Listed in `docs/LIMITATIONS.md`. *If the reviewer meant this second meaning, say so; it is a different feature.*
 
-1.Does `GET /api/offering` (snapshot) take the lock, or read the `LinkedHashSet`/map without it? Unsynchronised reads of non-thread-safe collections can throw or return a torn view: Solution has been implemented using reentrant lock mechanism to handle synchronization
+### 3. "Gate or remove the open records endpoint"
+**Gated, fail-closed.** `PUT /api/learners/{id}/completed-courses` requires header `X-Admin-Key` matching `ADMIN_API_KEY`. If no key is configured the endpoint is disabled (403); a wrong or missing key is 401; comparison is constant-time. Tests: `AdminDisabledApiTest` and the key cases in `RegistrationApiTest`. Remaining limits (single shared key, clear-text HTTP, no rate limit, other endpoints still open) are recorded in `docs/LIMITATIONS.md`.
 
-2.Does `PUT /completed-courses` take the same lock as enroll/drop, and does it call `fillOpenSeats` while holding it? Is there a test for PUT racing a drop? Yes
+### 4. "Move the HTTP status mapping out of the service exception"
+**Done.** Service exceptions now carry only an `ErrorCode`; they import nothing from Spring web. `web/HttpStatusMapper` is the only place that maps codes to statuses, using a `switch` with no default so a new code without a status does not compile. Test: `HttpStatusMapperTest`; the API tests still assert the actual statuses.
 
-3.If an already-ENROLLED learner's completed courses are later changed so they no longer meet the prerequisite, what happens? Is that behavior documented and tested, or undefined? Yes
-
-4.A seat is open, the queue holds only ineligible waiters, and a new eligible learner enrols. Do they get the seat directly? Is that consistent with "earlier waiters keep priority"? They are ineligible, so probably yes
-
-5.Can the state "open seat AND eligible waiter" ever persist after any operation returns? Which invariant or test guards this? yes
-
-6.Position semantics: README shows ENROLLED `position: 0` and WAITLISTED `position: 1`. Is waitlist position counted among all waiters or only eligible ones? Is that the right thing to tell a learner? Is it tested? Yes
-
-7.Validation and ID normalisation: trim/case? Blank, null, very long ids? Does "Alice" and "alice" collide, and is that tested? Yes
-
-8.Config edge cases: capacity 0 or negative, blank prerequisite. Does startup fail clearly or misbehave? Will return Proper message back to learner on course availability
-
-9.Is the check-before-mutate order really "every check before any change" in `enroll` and `drop`? Yes
-
-10.Identified possible null pointer exceptions: handled with valid code fix
-
-
-## 3. Concurrency review
-
-- Lock scope: ReentrantLock has been used to achieve  better locking to achieve high through put 
-- Shared mutable state: ENROLLMENT, WAITLIST, WAITLISTED
-- Check-then-act operations: Yes
-- Race scenarios tested: Yes
-- Race scenarios Not tested: No 
-- Remaining uncertainty: Verified and covered in code
-
-## 4. AI-generated suggestions I challenged
-
-Re-decide every row of the decisions table in `docs/AI-PROMPT-AND-USE-RECORD.md`.
-Record at least the ones you agree with, and any you overturn.
-
-| AI call (copy from record) | AI's decision | My verdict | My reason | Evidence |
-| --- | --- | --- | --- | --- |
-| Handle ineligible users use cases and duplicate learner regsitration handling | edit | Add Missing criteria | Cover Edeg cases | file, test or output |
-
-Also record the external-evaluation episode (restore the deleted record entry first):
-- Findings I disagreed with or deferred, and why: Missing HTTP Status codes in response and missed some edge case Handling
-- What changed in the code because of it: Handling in eligible learner, duplicate learner use cases and handling lock efficiently 
-
-## 5. Verification
-
-Fill from a real run. Paste real output, not a summary.
-
-- Command executed: `mvn clean verify`
-- Environment: JDK : 17 , Maven: 3.19, OS: Windows
-- Exit code: 200,202,404
-- Observed result: 38 tests run, 0 failures, 0 errors, 0 skipped
-- Repeated race tests (`@RepeatedTest(50)`): Yes
-- What remains unverified: Verified all test cases
-
-### Mutation results against the real JUnit suite
-
-Apply one mutant at a time, run `mvn test`, record, then `git checkout -- src`.
-
-| Mutant | Tests failed (count) | Names of failing tests | Caught? |
-| --- | --- | --- | --- |
-| nolock (lock removed) | | | |
-| lifo (FIFO reversed) | | | |
-| noeligibility | | | |
-| nocapacity | | | |
-| dropnocheck (repeated drop allowed) | | | |
-| removeineligible (wrong policy) | | | |
-
-Lock removed, repeated race tests: failed ___ of 50 runs.
-
-If any mutant is NOT caught, say so here and add a test. That is a stronger result than six clean catches.
-
-## 6. Independent AI review (fresh session, brief + repo only)
-
-| Finding from the second AI | My decision (fix / document / reject) | My reason | Commit |
-| --- | --- | --- | --- |
-| Act as a senior technical reviewer and evaluator with expertise in software architecture, AI-powered applications, agentic AI frameworks, LLM integration, and production-grade software engineering. | Document| Update prompts| |
-
-## 7. Conclusion
-
-Based on my review of the Course Waitlist implementation, I focused on the correctness of the enrollment and withdrawal flows, prerequisite validation, FIFO waitlist behavior, skip-and-retain policy, and concurrency handling. I also considered whether validation occurs before state changes and whether the implementation and tests align with the assessment acceptance criteria.
-
-The implementation appears to address the core requirements, including automatic promotion of eligible learners while retaining the queue positions of ineligible learners. However, code inspection alone is not sufficient to establish that all scenarios behave correctly under concurrent execution. The Maven test suite, planted-bug checks, and repeated concurrency tests must provide the supporting evidence for these conclusions.
-
-My priority is to independently validate the implementation, document any gaps or uncertainties, and make changes only where supported by the requirements and observed behavior. AI-generated suggestions are treated as recommendations that require my own review and verification, rather than as automatically accepted decisions.
-
-Any remaining unverified behavior will be documented transparently. The goal is to deliver a correct, maintainable, and well-tested solution while demonstrating responsible AI-assisted engineering and independent technical judgment.
+### 5. "Add a mixed-operation concurrency test"
+**Done.** `RegistrationServiceConcurrencyTest.mixedEnrolDropAndRecordUpdatesPreserveInvariants`: 8 threads run 1,500 random enrol/drop/eligibility-change operations each over 30 learners while a watcher thread continuously checks snapshots for capacity overflow, duplicates and overlap; at the end all learners are re-qualified and the test asserts no seat is left open beside a waiter. The race tests are repeated (`@RepeatedTest`) so a rare interleaving has more chances to show. Known gap: the watcher checks invariant 4 only at the end (see `docs/AGENT-REVIEW.md`, finding 7).

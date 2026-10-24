@@ -1,33 +1,18 @@
-Code : https://github.com/sreenathsede/course-waitlist/
+# Independent AI review
 
-Role: Senior Technical Reviewer — AI, Agentic Systems, and Software Engineering
-Act as a senior technical reviewer and evaluator with expertise in software architecture, AI-powered applications, agentic AI frameworks and production-grade software engineering.
-Your task is to thoroughly review the submitted assessment, including its requirements, source code, architecture, documentation, tests, and implementation.
-1. Overall Assessment Evaluation
+**Reviewer:** a fresh AI agent session (same model family as the authoring assistant but with no memory of authoring). It was given only the assessment brief and the repository, read-only, and told to report verified defects with evidence. It did not run Maven (unavailable); it did run `verification/run.sh`. Reviewed at git HEAD `209ba8d`.
+**Decisions below** (fixed / documented / deferred / rejected) were proposed by the authoring assistant and **need the candidate's confirmation**.
 
-* Evaluate how completely the solution satisfies the assessment requirements and acceptance criteria.
-* Assess code quality, architecture, maintainability, readability, security, performance, scalability, and error handling.
-* Identify missing features, incomplete implementations, design flaws, hardcoded values, and potential production risks.
-* Verify whether the solution is functional and whether the documented claims are supported by actual implementation.
+| # | Sev | Finding (summarised) | Decision |
+|---|---|---|---|
+| 1 | Med | README quick-start broken: the records PUT has no `X-Admin-Key`, the gate is fail-closed with a blank default, so the PUT returns 403 and the following POST returns 422. README omits `ADMIN_API_KEY`, `lock-timeout-millis`, 401/403/503. | **Fixed** in README (config block, API table, curl with key). |
+| 2 | Med | "38 tests, 0 failures" is stale: measured at `786daeb`, before three commits added many tests; the current suite has never been seen running. | **Fixed (wording)**: README now says the 38 figure is from `786daeb`, the larger suite is unobserved by the author, and asks for a real `mvn clean verify` count. **Candidate must run it.** |
+| 3 | Med | Docs contradict code: LIMITATIONS says "unauthenticated"; "19 passed" (actual 21); "six" mutants (seven); "3 scenarios" (4); DESIGN omits 401/403/503 and the timeout. | **Fixed** in README, AGENTS.md, DESIGN, LIMITATIONS. |
+| 4 | Med | The AI record has no entry for the last round of work (timeout, gate, mapper move, new tests); prompts are paraphrased; leftover "candidate: review" banner; decisions are all the assistant's. | **Partly fixed**: entries added to the record. The exact prompts used for that round are not available to the authoring assistant; **candidate to add**. Banner left in place deliberately: the candidate must re-decide each call. |
+| 5 | Low-Med | Scope creep: admin gate, 503 path, AGENTS.md, ~250-line duplicate harness. | **Kept**: gate and timeout were requested in the human review (`docs/HUMAN-REVIEW.md`); harness retained as secondary evidence but the JUnit suite is declared authoritative. Candidate may delete `verification/` if proportionality matters more. |
+| 6 | Low-Med | Inconsistent gating: `GET /api/offering` and `DELETE` are open; body validation precedes the gate (400 before 401); key sent in clear, no rate limit. | **Documented** in LIMITATIONS; not built (identity is out of scope per the brief). |
+| 7 | Low | Test weaknesses: racing-drops test checks the promoted *set*, not order; mixed-test watcher checks only invariants 1-2 continuously and could die silently on `ServiceBusy`; `done` not set if `runConcurrently` throws; `HttpStatusMapperTest` near-vacuous; no MockMvc test for a real 503/`Retry-After`; interrupt test passes without a lock holder; no interrupt mutant. | **Deferred, documented** in LIMITATIONS. Not changed because the assistant cannot run the JUnit suite. Suggested fixes: assert promotion order in the racing-drops test (drop one seat at a time); catch exceptions in the watcher and record them; set `done` in a `finally`. |
+| 8 | Low | Undocumented policy edges: an enrolled learner who loses the prerequisite keeps the seat; with an open seat and only ineligible waiters, a new eligible joiner is enrolled ahead of an earlier retained waiter. | **Documented** in README assumptions. Policy itself unchanged. |
+| 9 | Low | Records response echoes submitted codes, not the normalised stored codes. | **Documented**, code unchanged. |
 
-2. AI and Agentic Effectiveness
-   Evaluate the depth, correctness, and practical effectiveness of AI and agentic framework usage.
-   Assess:
-
-* Appropriate use of agentic framework.
-* Whether the solution uses genuine agentic workflows rather than conventional deterministic logic presented as agentic AI.
-* Agent roles, goals, tools, planning, task execution, decision-making, and orchestration.
-* Context management, memory, state transitions, and multi-step reasoning, where applicable.
-* Tool invocation, structured outputs, validation, retries, failure recovery, and human-in-the-loop controls, where relevant.
-* LLM integration, prompt design, grounding, hallucination prevention, and output reliability.
-* Whether AI and agentic components provide measurable value over a simpler non-agentic implementation.
-* Whether framework usage is substantive, correctly implemented, and verifiable from the code.
-
-Do not award points merely because framework dependencies, annotations, prompts, or agent-related class names exist. Evaluate actual execution paths and demonstrated behavior.
-3. Acceptance Criteria and Testing
-
-* Map every acceptance criterion to its corresponding implementation and test evidence.
-* Identify criteria that are fully met, partially met, unmet, or impossible to verify.
-* Review unit tests, integration tests, edge cases, failure scenarios, and test coverage.
-* Identify missing tests for AI outputs, agent workflows, tool failures, invalid inputs, and unexpected responses.
-* Distinguish between tests that exist and tests that have actually been executed successfully.
+**Verified correct by the reviewer:** check order in `enroll` and all throws before mutation; repeated drop cannot free a second seat; `fillOpenSeats` is FIFO and skip-and-retain; `locked()` uses `tryLock`, restores the interrupt flag, unlocks in `finally`, and every public method goes through it; status mapping is consistent and framework errors keep their status; `verification/run.sh` passes 21/21 and six of seven mutants were caught within the reviewer's time limit (`nolock` hangs by design); no secrets are committed; the skip-and-retain policy is stated identically in code, DESIGN, README and tests.
