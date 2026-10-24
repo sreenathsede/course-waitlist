@@ -52,7 +52,10 @@ Each mutant is a deliberate bug applied to a copy of `RegistrationService`; the 
 | `dropnocheck` (repeated drop succeeds) | 3 failed (repeated drop, unknown drop, racing drops): **caught** |
 | `removeineligible` (wrong policy) | 2 failed (retained, open-seat restore): **caught** |
 
-**Not verified:** `mvn clean verify`; the controller, exception handler, JUnit and MockMvc tests have never been compiled or run. The new `businessFailuresCarry...` test is likewise unrun.
+### Maven build (run by the candidate on their own machine)
+`mvn clean verify` reported: `Tests run: 38, Failures: 0, Errors: 0, Skipped: 0`. This covers the unit, concurrency and MockMvc API tests, including `businessFailuresCarryTheDocumentedCodesAndStatuses` and the controller and exception handler, none of which the assistant could compile in its sandbox (Maven Central blocked, HTTP 403). Result relayed by the candidate; the assistant did not observe it.
+
+**Still not verified:** the mutants were run only through the offline harness, not against the JUnit suite. Running them against the real tests (for example, remove the lock and run `mvn test`) would be stronger evidence.
 
 ## 3. Process incident
 While building, the assistant wrote into a folder that already held an earlier attempt at this assessment and overwrote about nine same-named files before noticing. Nothing was deleted; its own files were moved to a clean folder and the earlier files left untouched.

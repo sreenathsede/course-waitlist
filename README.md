@@ -72,6 +72,5 @@ AI is used as an engineering assistant, as the brief asks (AC7); no model runs i
 * `verification/`: a JDK-only check plus six seeded bugs ("mutants") that the checks must catch, including removing the lock.
 
 ## Verification status
-* `mvn clean verify`: **not run by the author's tooling** (Maven Central was blocked there). Run it first and fix anything it reports.
-* `verification/run.sh` (JDK 17+ only): compiles config/domain/repository/service against stub annotations and runs 19 checks mirroring the unit and concurrency tests. Pass `nolock`, `lifo`, `noeligibility`, `nocapacity`, `dropnocheck` or `removeineligible` to inject a bug; each must make it fail. Results are in the AI record.
-* The controller, exception handler and JUnit/MockMvc tests are only verified by `mvn`.
+* `mvn clean verify`: **38 tests run, 0 failures, 0 errors, 0 skipped** (run by the candidate; see the AI record).
+* `verification/run.sh` (JDK 17+ only): 19 offline checks mirroring the unit and concurrency tests. Pass `nolock`, `lifo`, `noeligibility`, `nocapacity`, `dropnocheck` or `removeineligible` to inject a bug; each must make it fail (results in the AI record).
