@@ -26,6 +26,10 @@ public class EligibilityPolicy {
         return prerequisite == null || completedCourses.contains(prerequisite);
     }
 
-    /** @return normalised prerequisite code or null when there is none */
-    public String prerequisite() { return prerequisite; }
+    /**
+     * @return normalised prerequisite code or null when there is none
+     */
+    public String prerequisite() {
+        return prerequisite;
+    }
 }

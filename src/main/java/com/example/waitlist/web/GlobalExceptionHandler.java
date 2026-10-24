@@ -17,19 +17,25 @@ import com.example.waitlist.web.Dtos.ErrorResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-/** Centralised mapping of failures to a uniform {@link ErrorResponse}. */
+/**
+ * Centralised mapping of failures to a uniform {@link ErrorResponse}.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    /** Business failures: status and code come from the exception itself. */
+    /**
+     * Business failures: status and code come from the exception itself.
+     */
     @ExceptionHandler(RegistrationException.class)
     public ResponseEntity<ErrorResponse> business(RegistrationException ex, HttpServletRequest req) {
         return build(ex.status(), ex.code(), ex.getMessage(), req);
     }
 
-    /** Bean Validation failures on request bodies. */
+    /**
+     * Bean Validation failures on request bodies.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException ex, HttpServletRequest req) {
         String msg = ex.getBindingResult().getFieldErrors().stream()
@@ -38,7 +44,9 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", msg, req);
     }
 
-    /** Missing/malformed JSON body. */
+    /**
+     * Missing/malformed JSON body.
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> unreadable(HttpMessageNotReadableException ex, HttpServletRequest req) {
         return build(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "Request body is missing or malformed JSON", req);

@@ -17,22 +17,35 @@ public abstract class RegistrationException extends RuntimeException {
         this.status = status;
     }
 
-    public String code() { return code; }
-    public HttpStatus status() { return status; }
-
-    /** Malformed input such as a blank or illegal learner id (400). */
-    public static class InvalidRequest extends RegistrationException {
-        public InvalidRequest(String message) { super("INVALID_REQUEST", HttpStatus.BAD_REQUEST, message); }
+    public String code() {
+        return code;
     }
 
-    /** Learner already holds a seat (409). */
+    public HttpStatus status() {
+        return status;
+    }
+
+    /**
+     * Malformed input such as a blank or illegal learner id (400).
+     */
+    public static class InvalidRequest extends RegistrationException {
+        public InvalidRequest(String message) {
+            super("INVALID_REQUEST", HttpStatus.BAD_REQUEST, message);
+        }
+    }
+
+    /**
+     * Learner already holds a seat (409).
+     */
     public static class AlreadyEnrolled extends RegistrationException {
         public AlreadyEnrolled(String id) {
             super("ALREADY_ENROLLED", HttpStatus.CONFLICT, "Learner '" + id + "' is already enrolled");
         }
     }
 
-    /** Learner is already queued; no second waitlist record is created (409). */
+    /**
+     * Learner is already queued; no second waitlist record is created (409).
+     */
     public static class AlreadyWaitlisted extends RegistrationException {
         public AlreadyWaitlisted(String id, int position) {
             super("ALREADY_WAITLISTED", HttpStatus.CONFLICT,
@@ -40,7 +53,9 @@ public abstract class RegistrationException extends RuntimeException {
         }
     }
 
-    /** Prerequisite not satisfied; the learner is neither enrolled nor queued (422). */
+    /**
+     * Prerequisite not satisfied; the learner is neither enrolled nor queued (422).
+     */
     public static class PrerequisiteNotMet extends RegistrationException {
         public PrerequisiteNotMet(String id, String prerequisite) {
             super("PREREQUISITE_NOT_MET", HttpStatus.UNPROCESSABLE_ENTITY,
@@ -48,7 +63,9 @@ public abstract class RegistrationException extends RuntimeException {
         }
     }
 
-    /** Drop for a learner that is neither enrolled nor waitlisted, including a repeated drop (404). */
+    /**
+     * Drop for a learner that is neither enrolled nor waitlisted, including a repeated drop (404).
+     */
     public static class NotRegistered extends RegistrationException {
         public NotRegistered(String id) {
             super("NOT_REGISTERED", HttpStatus.NOT_FOUND,

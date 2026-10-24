@@ -4,7 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
-/** Entry point. {@code @ConfigurationPropertiesScan} registers {@code OfferingProperties}. */
+/**
+ * Entry point. {@code @ConfigurationPropertiesScan} registers {@code OfferingProperties}.
+ */
 @SpringBootApplication
 @ConfigurationPropertiesScan
 public class WaitlistApplication {

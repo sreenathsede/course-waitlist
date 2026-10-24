@@ -48,7 +48,9 @@ import com.example.waitlist.service.RegistrationException.*;
 public class RegistrationService {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationService.class);
-    /** Letters, digits, dot, underscore, hyphen; keeps ids safe for logs and URLs. */
+    /**
+     * Letters, digits, dot, underscore, hyphen; keeps ids safe for logs and URLs.
+     */
     private static final Pattern ID_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
 
     private final OfferingProperties offering;
@@ -130,7 +132,9 @@ public class RegistrationService {
         });
     }
 
-    /** Consistent view of current state. */
+    /**
+     * Consistent view of current state.
+     */
     public OfferingSnapshot snapshot() {
         return locked(() -> new OfferingSnapshot(
                 offering.code(), offering.capacity(),

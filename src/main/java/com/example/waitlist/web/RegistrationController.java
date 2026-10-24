@@ -15,7 +15,9 @@ import com.example.waitlist.web.Dtos.*;
 
 import jakarta.validation.Valid;
 
-/** Thin REST adapter: translates HTTP to service calls. No business rules live here. */
+/**
+ * Thin REST adapter: translates HTTP to service calls. No business rules live here.
+ */
 @RestController
 @RequestMapping("/api")
 public class RegistrationController {
@@ -26,7 +28,9 @@ public class RegistrationController {
         this.service = service;
     }
 
-    /** 201 when seated, 202 when waitlisted (accepted, not yet enrolled). */
+    /**
+     * 201 when seated, 202 when waitlisted (accepted, not yet enrolled).
+     */
     @PostMapping("/offering/enrollments")
     public ResponseEntity<EnrollmentResult> enroll(@Valid @RequestBody EnrollRequest request) {
         EnrollmentResult result = service.enroll(request.learnerId());
@@ -34,7 +38,9 @@ public class RegistrationController {
         return ResponseEntity.status(status).body(result);
     }
 
-    /** Drop from enrolment or waitlist. 404 for unknown/repeated drops. */
+    /**
+     * Drop from enrolment or waitlist. 404 for unknown/repeated drops.
+     */
     @DeleteMapping("/offering/enrollments/{learnerId}")
     public DropResult drop(@PathVariable String learnerId) {
         return service.drop(learnerId);
@@ -45,7 +51,9 @@ public class RegistrationController {
         return service.snapshot();
     }
 
-    /** Stand-in for a records system: set what a learner has completed (drives the prerequisite rule). */
+    /**
+     * Stand-in for a records system: set what a learner has completed (drives the prerequisite rule).
+     */
     @PutMapping("/learners/{learnerId}/completed-courses")
     public CompletedCoursesResponse setCompleted(@PathVariable String learnerId,
                                                  @Valid @RequestBody CompletedCoursesRequest request) {

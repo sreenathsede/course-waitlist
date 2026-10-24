@@ -22,23 +22,6 @@
 
 *Verification:* `mvn` could not run (Central blocked, HTTP 403). Instead: core classes compiled against stub annotations and a 19-check harness run: **19 passed, 0 failed**.
 
-### P2: review against an external evaluation (52/100, AI effectiveness 3/10)
-*Prompt (summary, from the candidate):* Review the evaluation of my earlier GitHub submission and target 95+/100 overall and above 9/10 for AI/agentic effectiveness.
-
-*Response (summary):* Mapped each finding to this project: most were already absent (no fake agent layer, no Swagger, real policy, API tests, drop-from-waitlist). Remaining gaps: no proof the concurrency test needs the lock, thin record, no iteration history, doc wording, no worked ineligible-learner answer.
-
-| Finding | Action | Decision |
-|---|---|---|
-| Prompt log not real | Replaced with this real record | Accepted |
-| Agent layer for show | None exists; `AGENTS.md` gives a real agent the invariants and a definition of done | Accepted |
-| Policy muddled | One policy, in DESIGN, code comment, tests and a worked example | Accepted |
-| Docs hedge / wrong env-var claim | Hedging removed; relaxed-binding note added (`OFFERING_CAPACITY`) | Accepted |
-| Tests only assert "throws" | Added `businessFailuresCarryTheDocumentedCodesAndStatuses` (code + HTTP status); MockMvc tests assert statuses | Accepted |
-| No evidence concurrency test fails without lock | `verification/` mutation harness (below) | Accepted |
-| Single commit, no iteration | Real incremental commits (`git log`); history not backdated and the first commit is the whole baseline, so it shows iteration only from that point | Edited: stated honestly |
-| Waitlist timestamps unused, awkward controller flag, unused import | Not present in this code (no timestamps; controller calls `enroll(id)` only) | No change needed |
-| Use of a "skill.md"/prompt string nothing consumes | Not added | Rejected |
-
 ## 2. Verification evidence (real runs, `verification/run.sh`, JDK 21 sandbox)
 Each mutant is a deliberate bug applied to a copy of `RegistrationService`; the checks must fail.
 

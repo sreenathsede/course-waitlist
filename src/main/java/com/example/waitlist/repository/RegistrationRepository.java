@@ -24,24 +24,42 @@ public class RegistrationRepository {
 
     private final Set<String> enrolled = new LinkedHashSet<>();
     private final Set<String> waitlist = new LinkedHashSet<>();
-    /** learnerId -> completed course codes (upper-case). Absent means "nothing completed". */
+    /**
+     * learnerId -> completed course codes (upper-case). Absent means "nothing completed".
+     */
     private final Map<String, Set<String>> completedCourses = new HashMap<>();
 
-    public boolean isEnrolled(String learnerId) { return enrolled.contains(learnerId); }
+    public boolean isEnrolled(String learnerId) {
+        return enrolled.contains(learnerId);
+    }
 
-    public boolean isWaitlisted(String learnerId) { return waitlist.contains(learnerId); }
+    public boolean isWaitlisted(String learnerId) {
+        return waitlist.contains(learnerId);
+    }
 
-    public int enrolledCount() { return enrolled.size(); }
+    public int enrolledCount() {
+        return enrolled.size();
+    }
 
-    public void addEnrolled(String learnerId) { enrolled.add(learnerId); }
+    public void addEnrolled(String learnerId) {
+        enrolled.add(learnerId);
+    }
 
-    public boolean removeEnrolled(String learnerId) { return enrolled.remove(learnerId); }
+    public boolean removeEnrolled(String learnerId) {
+        return enrolled.remove(learnerId);
+    }
 
-    public void addToWaitlist(String learnerId) { waitlist.add(learnerId); }
+    public void addToWaitlist(String learnerId) {
+        waitlist.add(learnerId);
+    }
 
-    public boolean removeFromWaitlist(String learnerId) { return waitlist.remove(learnerId); }
+    public boolean removeFromWaitlist(String learnerId) {
+        return waitlist.remove(learnerId);
+    }
 
-    /** @return 1-based position in the waitlist, or 0 when not waitlisted */
+    /**
+     * @return 1-based position in the waitlist, or 0 when not waitlisted
+     */
     public int waitlistPosition(String learnerId) {
         int pos = 1;
         for (String id : waitlist) {
@@ -51,10 +69,16 @@ public class RegistrationRepository {
         return 0;
     }
 
-    /** @return defensive copy of the waitlist in FIFO order (safe to iterate while mutating the store) */
-    public List<String> waitlistInOrder() { return new ArrayList<>(waitlist); }
+    /**
+     * @return defensive copy of the waitlist in FIFO order (safe to iterate while mutating the store)
+     */
+    public List<String> waitlistInOrder() {
+        return new ArrayList<>(waitlist);
+    }
 
-    public List<String> enrolledInOrder() { return new ArrayList<>(enrolled); }
+    public List<String> enrolledInOrder() {
+        return new ArrayList<>(enrolled);
+    }
 
     public Set<String> completedCourses(String learnerId) {
         return Set.copyOf(completedCourses.getOrDefault(learnerId, Set.of()));
