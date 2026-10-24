@@ -19,6 +19,14 @@ One course offering. In scope: enroll, drop, FIFO waitlist promotion, and a lear
 ## Waitlist-promotion rule
 Scan the waitlist front to back; promote each eligible learner until seats are full or the queue ends. **Ineligible learners are skipped and retain their place.** Rationale: eligibility is enforced at join time, so ineligibility at the front can only come from a later records change. Removing the learner would punish a possibly temporary data change and silently lose their place; retaining is reversible and keeps FIFO fairness.
 
+## Worked example: a waitlisted learner becomes ineligible before reaching the front
+Capacity 2, prerequisite CS101. `a`, `b` enrolled; `c`, `d` waitlisted (positions 1, 2).
+1. The records feed removes CS101 from `c`. Nothing moves yet: `c` stays at position 1.
+2. `a` drops. Promotion scans: `c` ineligible, so skipped and retained; `d` eligible, so promoted. Result: enrolled `b, d`, waitlist `c`.
+3. Case A: `c` regains CS101 while the seat is full. `c` stays first in line and gets the next seat.
+   Case B: instead `b` drops with `c` still ineligible, so the seat stays open. When `c` regains CS101, `updateCompletedCourses` re-runs promotion and `c` is seated immediately (invariant 4).
+Tests: `ineligibleWaiterIsSkippedButRetainsPlace`, `restoredEligibilityPromotesRetainedLearnerIntoOpenSeat`, `retainedLearnerKeepsPriorityOverLaterJoiners`.
+
 ## Concurrency
 All operations take one fair `ReentrantLock`. The aggregate is tiny, so a coarse lock is simplest and makes check-then-act (count, then add) atomic; the repository is deliberately not thread-safe. Alternatives rejected: per-learner locks or concurrent collections (capacity check spans several structures), optimistic versioning (needs a persistence layer we do not have).
 

@@ -28,6 +28,8 @@ offering:
   prerequisite: CS101    # blank = no prerequisite
 ```
 
+Any key can be overridden by environment variable through Spring's relaxed binding, e.g. `OFFERING_CAPACITY=5 mvn spring-boot:run`.
+
 ## Assumptions (stated per the assessment)
 * **Prerequisite rule:** a learner is eligible if the offering has no prerequisite, or the learner's completed courses contain it (case-insensitive). Completed courses are set through `PUT /api/learners/{id}/completed-courses`, a stand-in for a records system (identity/records integration is out of scope). A learner with no record has completed nothing.
 * **Only eligible learners ever join the queue.** An ineligible request gets 422 and nothing is stored.
@@ -63,8 +65,13 @@ Error body (all failures): `{"timestamp":"...","status":422,"code":"PREREQUISITE
 | 6 Tests incl. concurrency | single fair `ReentrantLock` | `RegistrationServiceTest`, `RegistrationServiceConcurrencyTest` (3 scenarios), `RegistrationApiTest` |
 | 7 AI use recorded | n/a | [docs/AI-PROMPT-AND-USE-RECORD.md](docs/AI-PROMPT-AND-USE-RECORD.md) |
 
-## "AICDL / agentic framework"
-The assessment defines neither. Its only AI requirement is AC7: use AI as an *engineering assistant* and record it. No LLM or agent runs inside the service: the brief forbids extra scope, and the acceptance criteria are deterministic. See the AI record for the reasoning.
+## How AI is used in this repo
+AI is used as an engineering assistant, as the brief asks (AC7); no model runs inside the service. What makes that use checkable:
+* `AGENTS.md`: invariants and "definition of done" any coding agent must follow, including quoting real test output.
+* `docs/AI-PROMPT-AND-USE-RECORD.md`: real prompts, response summaries, accept/edit/reject decisions and evidence.
+* `verification/`: a JDK-only check plus six seeded bugs ("mutants") that the checks must catch, including removing the lock.
 
-## Verification status: read this
-Maven Central was unreachable in the environment that produced this project, so **`mvn test` has not been run**. What was run: the config/domain/repository/service classes compiled against stub annotations and exercised by a 19-check plain-Java harness (all passed, including the concurrency cases). The controller, exception handler and JUnit/MockMvc tests have **not been compiled or executed**. Please run `mvn clean verify` and fix anything it reports.
+## Verification status
+* `mvn clean verify`: **not run by the author's tooling** (Maven Central was blocked there). Run it first and fix anything it reports.
+* `verification/run.sh` (JDK 17+ only): compiles config/domain/repository/service against stub annotations and runs 19 checks mirroring the unit and concurrency tests. Pass `nolock`, `lifo`, `noeligibility`, `nocapacity`, `dropnocheck` or `removeineligible` to inject a bug; each must make it fail. Results are in the AI record.
+* The controller, exception handler and JUnit/MockMvc tests are only verified by `mvn`.
