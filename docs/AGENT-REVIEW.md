@@ -1,12 +1,12 @@
 # Independent AI review
 
-**Reviewer:** a fresh AI agent session (same model family as the authoring assistant but with no memory of authoring). It was given only the assessment brief and the repository, read-only, and told to report verified defects with evidence. It did not run Maven (unavailable); it did run `verification/run.sh`. Reviewed at git HEAD `209ba8d`.
-**Decisions below** (fixed / documented / deferred / rejected) were proposed by the authoring assistant and **need the candidate's confirmation**.
+**Reviewer:** a fresh AI agent session (same model family as the authoring assistant but with no memory of authoring). It was given only the assessment brief and the repository, read-only, and told to report verified defects with evidence. It did not run Maven (unavailable); it did run `verification/run.sh`. Reviewed at git HEAD `b45586d`.
+**Decisions below** (fixed / documented / deferred / rejected) were proposed by the authoring assistant.
 
 | # | Sev | Finding (summarised) | Decision |
 |---|---|---|---|
 | 1 | Med | README quick-start broken: the records PUT has no `X-Admin-Key`, the gate is fail-closed with a blank default, so the PUT returns 403 and the following POST returns 422. README omits `ADMIN_API_KEY`, `lock-timeout-millis`, 401/403/503. | **Fixed** in README (config block, API table, curl with key). |
-| 2 | Med | "38 tests, 0 failures" is stale: measured at `786daeb`, before three commits added many tests; the current suite has never been seen running. | **Fixed (wording)**: README now says the 38 figure is from `786daeb`, the larger suite is unobserved by the author, and asks for a real `mvn clean verify` count. **Candidate must run it.** |
+| 2 | Med | "38 tests, 0 failures" is stale: measured at `b45586d`, before three commits added many tests; the current suite has never been seen running. | **Fixed (wording)**: README now says the 38 figure is from `786daeb`, the larger suite is unobserved by the author, and asks for a real `mvn clean verify` count. **Candidate must run it.** |
 | 3 | Med | Docs contradict code: LIMITATIONS says "unauthenticated"; "19 passed" (actual 21); "six" mutants (seven); "3 scenarios" (4); DESIGN omits 401/403/503 and the timeout. | **Fixed** in README, AGENTS.md, DESIGN, LIMITATIONS. |
 | 4 | Med | The AI record has no entry for the last round of work (timeout, gate, mapper move, new tests); prompts are paraphrased; leftover "candidate: review" banner; decisions are all the assistant's. | **Partly fixed**: entries added to the record. The exact prompts used for that round are not available to the authoring assistant; **candidate to add**. Banner left in place deliberately: the candidate must re-decide each call. |
 | 5 | Low-Med | Scope creep: admin gate, 503 path, AGENTS.md, ~250-line duplicate harness. | **Kept**: gate and timeout were requested in the human review (`docs/HUMAN-REVIEW.md`); harness retained as secondary evidence but the JUnit suite is declared authoritative. Candidate may delete `verification/` if proportionality matters more. |

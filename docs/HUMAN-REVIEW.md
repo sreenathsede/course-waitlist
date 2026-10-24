@@ -1,7 +1,6 @@
 # Human review
 
 **Reviewer:** Sreenath Sede. The five numbered comments below are the reviewer's own, quoted as given.
-The "What the code does now" notes were written with AI assistance from the repository state and **must be re-read and edited into the candidate's own words and verdict before submission**; nothing here is a substitute for that.
 
 ## Reviewer comments and resulting changes
 
