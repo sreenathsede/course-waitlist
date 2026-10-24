@@ -218,4 +218,23 @@ class RegistrationServiceTest {
         assertThatThrownBy(() -> service.enroll(" a ")).isInstanceOf(AlreadyEnrolled.class);
         assertThat(List.of("a")).isEqualTo(service.snapshot().enrolled());
     }
+
+    // ---- the web layer relies on these codes/statuses; pin them so a refactor cannot silently change the contract ----
+    @Test
+    void businessFailuresCarryTheDocumentedCodesAndStatuses() {
+        qualify("a", "b", "c");
+        service.enroll("a");
+        assertThatThrownBy(() -> service.enroll("a")).isInstanceOfSatisfying(RegistrationException.class,
+                e -> { assertThat(e.code()).isEqualTo("ALREADY_ENROLLED"); assertThat(e.status().value()).isEqualTo(409); });
+        assertThatThrownBy(() -> service.enroll("zzz")).isInstanceOfSatisfying(RegistrationException.class,
+                e -> { assertThat(e.code()).isEqualTo("PREREQUISITE_NOT_MET"); assertThat(e.status().value()).isEqualTo(422); });
+        assertThatThrownBy(() -> service.drop("zzz")).isInstanceOfSatisfying(RegistrationException.class,
+                e -> { assertThat(e.code()).isEqualTo("NOT_REGISTERED"); assertThat(e.status().value()).isEqualTo(404); });
+        assertThatThrownBy(() -> service.enroll(" ")).isInstanceOfSatisfying(RegistrationException.class,
+                e -> { assertThat(e.code()).isEqualTo("INVALID_REQUEST"); assertThat(e.status().value()).isEqualTo(400); });
+        service.enroll("b");
+        service.enroll("c");
+        assertThatThrownBy(() -> service.enroll("c")).isInstanceOfSatisfying(RegistrationException.class,
+                e -> { assertThat(e.code()).isEqualTo("ALREADY_WAITLISTED"); assertThat(e.status().value()).isEqualTo(409); });
+    }
 }
