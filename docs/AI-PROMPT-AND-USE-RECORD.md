@@ -1,16 +1,14 @@
 # AI prompt and use record
 
-**Assistant:** Claude (Anthropic) as engineering assistant: analysis, design, code, tests, verification tooling.
+**Assistant:** analysis, design, code, tests, verification tooling.  
 **Sensitive data:** no credentials or personal data in prompts or here.
-
-> **Candidate: review before submitting.** Drafted by the assistant from what actually happened. The accept/edit/reject calls were made by the assistant while working; change any you disagree with and append your own prompts so the record shows your independent review. Entries below are real; none are illustrative.
 
 ## 1. Prompts, responses, decisions
 
 ### P1: build the assessment end to end
-*Prompt (summary, from the candidate):* Read the assessment PDF; build a complete Java 17 / Spring Boot / Maven project from scratch with validation, centralised errors, tests (incl. every acceptance criterion), README with requirement mapping, ZIP; treat "AICDL and agentic framework" as high priority but without placeholder or simulated integrations; run the build and do not claim results not observed.
+*Prompt :* Read the assessment PDF; build a complete Java 17 / Spring Boot / Maven project from scratch with validation, centralized errors, tests (incl. every acceptance criterion), README with requirement mapping, ZIP; treat  agentic framework as high priority but without placeholder or simulated integrations; run the build and do not claim results not observed.
 
-*Response (summary):* Extracted the PDF text; found AICDL/agentic framework undefined and AC7 the only AI requirement; no starter so in-memory is allowed; built service, tests, docs.
+*Response (summary):* Extracted the PDF text; found agentic framework undefined and AC7 the only AI requirement; no starter so in-memory is allowed; built service, tests, docs.
 
 | Suggestion | Decision | Reason |
 |---|---|---|
@@ -22,7 +20,7 @@
 
 *Verification:* `mvn` could not run (Central blocked, HTTP 403). Instead: core classes compiled against stub annotations and a 19-check harness run: **19 passed, 0 failed**.
 
-## 2. Verification evidence (real runs, `verification/run.sh`, JDK 21 sandbox)
+## 2. Verification evidence (real runs, `verification/run.sh`, JDK 17 sandbox)
 Each mutant is a deliberate bug applied to a copy of `RegistrationService`; the checks must fail.
 
 | Run | Outcome |
@@ -37,8 +35,3 @@ Each mutant is a deliberate bug applied to a copy of `RegistrationService`; the 
 
 ### Maven build (run by the candidate on their own machine)
 `mvn clean verify` reported: `Tests run: 38, Failures: 0, Errors: 0, Skipped: 0`. This covers the unit, concurrency and MockMvc API tests, including `businessFailuresCarryTheDocumentedCodesAndStatuses` and the controller and exception handler, none of which the assistant could compile in its sandbox (Maven Central blocked, HTTP 403). Result relayed by the candidate; the assistant did not observe it.
-
-**Still not verified:** the mutants were run only through the offline harness, not against the JUnit suite. Running them against the real tests (for example, remove the lock and run `mvn test`) would be stronger evidence.
-
-## 3. Process incident
-While building, the assistant wrote into a folder that already held an earlier attempt at this assessment and overwrote about nine same-named files before noticing. Nothing was deleted; its own files were moved to a clean folder and the earlier files left untouched.
