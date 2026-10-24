@@ -33,10 +33,6 @@ public class RegistrationRepository {
         return enrolled.contains(learnerId);
     }
 
-    public boolean isWaitlisted(String learnerId) {
-        return waitlist.contains(learnerId);
-    }
-
     public int enrolledCount() {
         return enrolled.size();
     }

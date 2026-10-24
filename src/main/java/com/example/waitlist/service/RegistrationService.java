@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import ch.qos.logback.core.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -70,22 +71,28 @@ public class RegistrationService {
      * mutation, so a rejected request leaves state untouched.
      */
     public EnrollmentResult enroll(String rawLearnerId) {
-        String id = normaliseId(rawLearnerId);
+        String leanerId = normaliseId(rawLearnerId);
         return locked(() -> {
-            if (repo.isEnrolled(id)) throw new AlreadyEnrolled(id);
-            int existing = repo.waitlistPosition(id);
-            if (existing > 0) throw new AlreadyWaitlisted(id, existing);
-            if (!policy.isEligible(repo.completedCourses(id))) throw new PrerequisiteNotMet(id, policy.prerequisite());
+            if (repo.isEnrolled(leanerId)) {
+                throw new AlreadyEnrolled(leanerId);
+            }
+            int existing = repo.waitlistPosition(leanerId);
+            if (existing > 0) {
+                throw new AlreadyWaitlisted(leanerId, existing);
+            }
+            if (!policy.isEligible(repo.completedCourses(leanerId))) {
+                throw new PrerequisiteNotMet(leanerId, policy.prerequisite());
+            }
 
             if (repo.enrolledCount() < offering.capacity()) {
-                repo.addEnrolled(id);
-                log.info("Enrolled {}", id);
-                return new EnrollmentResult(id, EnrollmentOutcome.ENROLLED, 0);
+                repo.addEnrolled(leanerId);
+                log.info("Enrolled {}", leanerId);
+                return new EnrollmentResult(leanerId, EnrollmentOutcome.ENROLLED, 0);
             }
-            repo.addToWaitlist(id);
-            int pos = repo.waitlistPosition(id);
-            log.info("Offering full; waitlisted {} at position {}", id, pos);
-            return new EnrollmentResult(id, EnrollmentOutcome.WAITLISTED, pos);
+            repo.addToWaitlist(leanerId);
+            int pos = repo.waitlistPosition(leanerId);
+            log.info("Offering full; waitlisted {} at position {}", leanerId, pos);
+            return new EnrollmentResult(leanerId, EnrollmentOutcome.WAITLISTED, pos);
         });
     }
 
@@ -96,18 +103,18 @@ public class RegistrationService {
      * free two seats.
      */
     public DropResult drop(String rawLearnerId) {
-        String id = normaliseId(rawLearnerId);
+        String leanerId = normaliseId(rawLearnerId);
         return locked(() -> {
-            if (repo.removeEnrolled(id)) {
+            if (repo.removeEnrolled(leanerId)) {
                 List<String> promoted = fillOpenSeats();
-                log.info("Dropped {}; promoted {}", id, promoted);
-                return new DropResult(id, DroppedFrom.ENROLLMENT, promoted);
+                log.info("Dropped {}; promoted {}", leanerId, promoted);
+                return new DropResult(leanerId, DroppedFrom.ENROLLMENT, promoted);
             }
-            if (repo.removeFromWaitlist(id)) {
-                log.info("Removed {} from waitlist", id);
-                return new DropResult(id, DroppedFrom.WAITLIST, List.of());
+            if (repo.removeFromWaitlist(leanerId)) {
+                log.info("Removed {} from waitlist", leanerId);
+                return new DropResult(leanerId, DroppedFrom.WAITLIST, List.of());
             }
-            throw new NotRegistered(id);
+            throw new NotRegistered(leanerId);
         });
     }
 
@@ -122,7 +129,7 @@ public class RegistrationService {
         String id = normaliseId(rawLearnerId);
         Set<String> normalised = courses.stream()
                 .map(c -> {
-                    if (c == null || c.isBlank()) throw new InvalidRequest("Course codes must not be blank");
+                    if (StringUtil.isNullOrEmpty(c)) throw new InvalidRequest("Course codes must not be blank");
                     return c.trim().toUpperCase(Locale.ROOT);
                 })
                 .collect(Collectors.toUnmodifiableSet());
@@ -163,7 +170,7 @@ public class RegistrationService {
     }
 
     private String normaliseId(String raw) {
-        if (raw == null || raw.isBlank()) throw new InvalidRequest("learnerId must not be blank");
+        if (StringUtil.isNullOrEmpty(raw)) throw new InvalidRequest("learnerId must not be blank");
         String id = raw.trim();
         if (!ID_PATTERN.matcher(id).matches()) {
             throw new InvalidRequest("learnerId must be 1-64 characters: letters, digits, '.', '_' or '-'");

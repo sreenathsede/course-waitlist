@@ -34,7 +34,7 @@ public class RegistrationController {
     @PostMapping("/offering/enrollments")
     public ResponseEntity<EnrollmentResult> enroll(@Valid @RequestBody EnrollRequest request) {
         EnrollmentResult result = service.enroll(request.learnerId());
-        HttpStatus status = result.outcome() == EnrollmentOutcome.ENROLLED ? HttpStatus.CREATED : HttpStatus.ACCEPTED;
+        HttpStatus status = EnrollmentOutcome.ENROLLED.name().equalsIgnoreCase(result.outcome().name()) ? HttpStatus.CREATED : HttpStatus.ACCEPTED;
         return ResponseEntity.status(status).body(result);
     }
 
