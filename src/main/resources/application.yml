@@ -1,0 +1,9 @@
+# The single course offering this service manages (assessment scope: ONE offering).
+offering:
+  code: CS201          # identifier shown in API responses
+  capacity: 3          # maximum number of enrolled learners (>= 1)
+  prerequisite: CS101  # course a learner must have completed; leave empty for "no prerequisite"
+
+spring:
+  application:
+    name: course-waitlist
